@@ -18,23 +18,54 @@ const formatNumber = (value) => {
 };
 
 const RegressionChart = ({ lineData }) => {
+  const allPoints = [];
+  lineData.forEach((customer) => {
+    customer.data.forEach((point) => {
+      allPoints.push({
+        name: customer.name,
+        date: point.x,
+        score: point.y,
+      });
+    });
+  });
+
   return (
     <div className="bg-white p-4 rounded-xl shadow">
       <h2 className="text-lg font-semibold mb-2">
-        Total jobs successfully indexed
+        Customer Health Score Trends
       </h2>
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={lineData}>
+        <LineChart>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="month" />
+          <XAxis
+            dataKey="date"
+            type="category"
+            allowDuplicatedCategory={false}
+            tickFormatter={(date) =>
+              typeof date === "string"
+                ? date.slice(0, 10)
+                : date
+            }
+          />
           <YAxis
-            domain={[0, "dataMax"]}
+            domain={[0, 100]}
             tickCount={5}
             tickFormatter={formatNumber}
+            label={{ value: "Health Score", angle: -90, position: "insideLeft" }}
           />
           <Tooltip />
           <Legend />
-          <Line type="monotone" dataKey="totalJobs" stroke="#4f46e5" />
+          {lineData.map((customer, idx) => (
+            <Line
+              key={customer.name}
+              data={customer.data}
+              dataKey="y"
+              name={customer.name}
+              dot={false}
+              stroke={`hsl(${(idx * 60) % 360}, 70%, 50%)`}
+              isAnimationActive={false}
+            />
+          ))}
         </LineChart>
       </ResponsiveContainer>
     </div>

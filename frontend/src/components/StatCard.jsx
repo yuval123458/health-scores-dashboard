@@ -9,7 +9,7 @@ const StatCard = ({ title, value, icon }) => {
           {value}
         </p>
       </div>
-      {icon && <div className="text-3xl text-blue-500">{icon}</div>}
+      {icon && <div className="text-3xl">{icon}</div>}
     </div>
   );
 };

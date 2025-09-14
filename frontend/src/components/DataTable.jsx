@@ -10,65 +10,46 @@ import {
 import { FaSpinner } from "react-icons/fa";
 import "./DataTable.css";
 
-const DataTable = () => {
-  const [data, setData] = useState([]);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [loading, setLoading] = useState(true);
+const DataTable = ({ customers, onRowClick }) => {
+  const [globalFilter, setGlobalFilter] = React.useState("");
 
-  useEffect(() => {
-    const fetchTopDeals = async () => {
-      try {
-        const res = await fetch("http://localhost:5001/api/deals/top-deals");
-        const json = await res.json();
-        setData(json);
-      } catch (err) {
-        console.error("failed to fetch top deals:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTopDeals();
-  }, []);
-
+  // Columns for customer health dashboard
   const columns = useMemo(
     () => [
       {
-        accessorKey: "transactionSourceName",
-        header: "Source",
+        accessorKey: "name",
+        header: "Customer Name",
       },
       {
-        accessorKey: "country_code",
-        header: "Country",
+        accessorKey: "email",
+        header: "Email",
       },
       {
-        accessorKey: "totalJobs",
-        header: "Total Jobs",
+        accessorKey: "health_score",
+        header: "Health Score",
       },
       {
-        accessorKey: "failedJobs",
-        header: "Failed Jobs",
+        accessorKey: "health_tier",
+        header: "Health Tier",
       },
       {
-        accessorKey: "recordCount",
-        header: "Records",
-      },
-      {
-        accessorKey: "timestamp",
-        header: "Timestamp",
+        accessorKey: "last_activity",
+        header: "Last Activity",
         cell: (info) =>
-          new Date(info.getValue()).toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-          }),
+          info.getValue()
+            ? new Date(info.getValue()).toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+              })
+            : "N/A",
       },
     ],
     []
   );
 
   const table = useReactTable({
-    data,
+    data: customers,
     columns,
     state: {
       globalFilter,
@@ -80,7 +61,7 @@ const DataTable = () => {
     getFilteredRowModel: getFilteredRowModel(),
   });
 
-  if (loading) {
+  if (!customers) {
     return (
       <div className="flex justify-center items-center py-10">
         <FaSpinner className="animate-spin text-2xl text-blue-500" />
@@ -93,7 +74,7 @@ const DataTable = () => {
       <div className="mb-4 flex justify-between">
         <input
           type="text"
-          placeholder="Search source name..."
+          placeholder="Search customer name..."
           value={globalFilter ?? ""}
           onChange={(e) => setGlobalFilter(e.target.value)}
           className="border rounded px-3 py-1 w-64"
@@ -125,7 +106,11 @@ const DataTable = () => {
         </thead>
         <tbody>
           {table.getRowModel().rows.map((row) => (
-            <tr key={row.id} className="hover:bg-gray-100">
+            <tr
+              key={row.id}
+              className="hover:bg-gray-100 cursor-pointer"
+              onClick={() => onRowClick && onRowClick(row.original)}
+            >
               {row.getVisibleCells().map((cell) => (
                 <td key={cell.id} className="border px-4 py-2">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
