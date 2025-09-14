@@ -1,16 +1,30 @@
+
 import os
 from datetime import datetime, timezone
 from sqlalchemy import create_engine, text
 from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
-
+from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv(override=True)
 
-# -- config --
 DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL, pool_pre_ping=True, future=True)
 app = FastAPI(title="customer health score API", version="0.1.0")
+
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://production-frontend.com",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def compute_health(row, segment):
     feat = max(0, min(100, int(row["feature_adoption"])))
@@ -26,17 +40,30 @@ def compute_health(row, segment):
 
 def tier(score): return "Green" if score >= 70 else ("Yellow" if score >= 50 else "Red")
 
+@app.on_event("startup")
+def test_db_connection():
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception as e:
+        import sys
+        print("Database connection failed:", e)
+        sys.exit(1)
+
 @app.get("/api/customers")
 def list_customers():
     sql = text("""
-        SELECT c.id, c.name, c.segment,
-               m.month_date, m.login_count, m.feature_adoption, m.nps_score,
+        SELECT c.id, c.external_id, c.name, c.segment, c.plan, c.created_at, c.updated_at,
+               m.month, m.login_count, m.feature_adoption, m.nps_score,
                m.support_tickets, m.payment_status, m.health_tier
         FROM customers c
-        JOIN (SELECT customer_id, MAX(month_date) max_month FROM monthly_metrics GROUP BY customer_id) lm
-          ON lm.customer_id = c.id
-        JOIN monthly_metrics m
-          ON m.customer_id = c.id AND m.month_date = lm.max_month
+        JOIN (
+            SELECT customer_id, MAX(month) max_month
+            FROM customer_monthly_metrics
+            GROUP BY customer_id
+        ) lm ON lm.customer_id = c.id
+        JOIN customer_monthly_metrics m
+          ON m.customer_id = c.id AND m.month = lm.max_month
         ORDER BY c.name
     """)
     with engine.connect() as conn:
@@ -47,13 +74,17 @@ def list_customers():
         score = compute_health(r, r["segment"])
         out.append({
             "id": r["id"],
+            "external_id": r["external_id"],
             "name": r["name"],
             "segment": r["segment"],
-            "month_date": r["month_date"].strftime("%Y-%m-%d"),
+            "plan": r["plan"],
+            "created_at": r["created_at"].strftime("%Y-%m-%d") if r["created_at"] else None,
+            "updated_at": r["updated_at"].strftime("%Y-%m-%d") if r["updated_at"] else None,
+            "month": r["month"],
             "health_score": score,
             "health_tier": tier(score),
             "metrics": {
-                "month_date": r["month_date"].strftime("%Y-%m-%d"),
+                "month": r["month"],
                 "login_count": r["login_count"],
                 "feature_adoption": r["feature_adoption"],
                 "nps_score": r["nps_score"],
@@ -67,15 +98,18 @@ def list_customers():
 @app.get("/api/customers/{id}/health")
 def customer_health_detail(id: int):
     with engine.connect() as conn:
-        customer = conn.execute(text("SELECT id, name, segment FROM customers WHERE id=:id"), {"id": id}).mappings().first()
+        customer = conn.execute(
+            text("SELECT id, external_id, name, segment, plan, created_at, updated_at FROM customers WHERE id=:id"),
+            {"id": id}
+        ).mappings().first()
         if not customer:
             raise HTTPException(404, "Customer not found")
         history = conn.execute(text("""
-            SELECT month_date, login_count, feature_adoption, nps_score,
+            SELECT month, login_count, feature_adoption, nps_score,
                    support_tickets, payment_status, health_tier
-            FROM monthly_metrics
+            FROM customer_monthly_metrics
             WHERE customer_id=:id
-            ORDER BY month_date DESC
+            ORDER BY month DESC
         """), {"id": id}).mappings().all()
 
     if not history:
@@ -93,13 +127,17 @@ def customer_health_detail(id: int):
         score = compute_health(row, customer["segment"])
         out.append({
             "id": customer["id"],
+            "external_id": customer["external_id"],
             "name": customer["name"],
             "segment": customer["segment"],
-            "month_date": h["month_date"].strftime("%Y-%m-%d"),
+            "plan": customer["plan"],
+            "created_at": customer["created_at"].strftime("%Y-%m-%d") if customer["created_at"] else None,
+            "updated_at": customer["updated_at"].strftime("%Y-%m-%d") if customer["updated_at"] else None,
+            "month": h["month"].strftime("%Y-%m-%d") if h["month"] else None,
             "health_score": score,
             "health_tier": tier(score),
             "metrics": {
-                "month_date": h["month_date"].strftime("%Y-%m-%d"),
+                "month": h["month"].strftime("%Y-%m-%d") if h["month"] else None,
                 "login_count": h["login_count"],
                 "feature_adoption": h["feature_adoption"],
                 "nps_score": h["nps_score"],
@@ -108,14 +146,20 @@ def customer_health_detail(id: int):
                 "health_tier": h["health_tier"],
             }
         })
-    return {"id": customer["id"], "name": customer["name"], "segment": customer["segment"], "history": out}
+    return {
+        "id": customer["id"],
+        "external_id": customer["external_id"],
+        "name": customer["name"],
+        "segment": customer["segment"],
+        "plan": customer["plan"],
+        "created_at": customer["created_at"].strftime("%Y-%m-%d") if customer["created_at"] else None,
+        "updated_at": customer["updated_at"].strftime("%Y-%m-%d") if customer["updated_at"] else None,
+        "history": out
+    }
 
 @app.post("/api/customers/{id}/events")
 def record_event_stub(id: int, payload: dict):
-    # Just validate customer exists and echo back; not stored yet
     with engine.connect() as conn:
         if not conn.execute(text("SELECT 1 FROM customers WHERE id=:id"), {"id": id}).first():
             raise HTTPException(404, "Customer not found")
-    # (you could check 'type' in payload here)
     return {"status": "accepted", "stored": False, "customer_id": id, "received": payload}
-
