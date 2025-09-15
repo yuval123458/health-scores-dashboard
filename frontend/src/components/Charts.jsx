@@ -3,6 +3,8 @@ import RegressionChart from "./RegressionChart";
 import BlockChart from "./BlockChart";
 
 const Charts = ({ customers }) => {
+
+
   const lineData = useMemo(() => {
     return customers.map((c) => ({
       name: c.name,
@@ -15,14 +17,14 @@ const Charts = ({ customers }) => {
     }));
   }, [customers]);
 
-  const countryData = useMemo(() => {
+    const segmentData = useMemo(() => {
     const counts = {};
     customers.forEach((c) => {
-      const country = c.country || "Unknown";
-      counts[country] = (counts[country] || 0) + 1;
+      const segment = c.segment || "Unknown";
+      counts[segment] = (counts[segment] || 0) + 1;
     });
-    return Object.entries(counts).map(([country, count]) => ({
-      country,
+    return Object.entries(counts).map(([segment, count]) => ({
+      segment,
       count,
     }));
   }, [customers]);
@@ -30,7 +32,7 @@ const Charts = ({ customers }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
       <RegressionChart lineData={lineData} />
-      <BlockChart countryData={countryData} />
+      <BlockChart segmentData={segmentData} />
     </div>
   );
 };

@@ -10,14 +10,14 @@ import {
   Legend,
 } from "recharts";
 
-const BlockChart = ({ countryData }) => {
+const BlockChart = ({ segmentData }) => {
   return (
-    <div className="bg-white p-4 rounded-xl shadow">
-      <h2 className="text-lg font-semibold mb-2">Customers by Country</h2>
+      <div className="bg-white p-4 rounded-xl shadow">
+      <h2 className="text-lg font-semibold mb-2">Customers by Segment</h2>
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={countryData}>
+        <BarChart data={segmentData}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="country" />
+          <XAxis dataKey="segment" />
           <YAxis />
           <Tooltip />
           <Legend />

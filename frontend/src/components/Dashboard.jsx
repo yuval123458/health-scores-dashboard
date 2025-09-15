@@ -8,31 +8,31 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [customerHealth, setCustomerHealth] = useState(null);
+  const [summary, setSummary] = useState(null); // <-- new
 
   useEffect(() => {
-  fetch(`${import.meta.env.VITE_API_URL}/api/customers`)
-    .then((res) => res.json())
+    fetch(`${import.meta.env.VITE_API_URL}/api/customers`)
+      .then((res) => res.json())
       .then((data) => setCustomers(data))
       .catch((err) => console.error("failed to fetch customers table:", err))
       .finally(() => setLoading(false));
+
+    // Fetch KPI summary
+    fetch(`${import.meta.env.VITE_API_URL}/api/dashboard/summary`)
+      .then((res) => res.json())
+      .then((data) => setSummary(data))
+      .catch((err) => console.error("failed to fetch dashboard summary:", err));
   }, []);
 
   const handleRowClick = (customer) => {
     setSelectedCustomer(customer);
-    fetch(`/api/customers/${customer.id}/health`)
+    fetch(`${import.meta.env.VITE_API_URL}/api/customers/${customer.id}/health`)
       .then((res) => res.json())
       .then((data) => setCustomerHealth(data))
       .catch((err) => console.error("failed to fetch customer health:", err));
   };
 
-  if (loading) return <div>Loading...</div>;
-
-  const summary = {
-    total: customers.length,
-    green: customers.filter((c) => c.health_tier === "Green").length,
-    yellow: customers.filter((c) => c.health_tier === "Yellow").length,
-    red: customers.filter((c) => c.health_tier === "Red").length,
-  };
+  if (loading || !summary) return <div>Loading...</div>;
 
   return (
     <div className="flex flex-col gap-8">
@@ -46,7 +46,6 @@ const Dashboard = () => {
           <h2 className="font-bold mb-2">
             {customerHealth.name} Health Details
           </h2>
-          {/* Render health breakdown here */}
           <pre>{JSON.stringify(customerHealth, null, 2)}</pre>
         </div>
       )}
