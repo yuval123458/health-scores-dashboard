@@ -1,0 +1,8 @@
+{
+  "name": "health-score-api",
+  "private": true,
+  "scripts": {
+    "pretest": "python3 -m pip install -r requirements.txt || python -m pip install -r requirements.txt",
+    "test": "PYTHONPATH=.. pytest -q --cov=. --cov-report=term-missing tests/test_scoring.py tests/test_api.py"
+  }
+}

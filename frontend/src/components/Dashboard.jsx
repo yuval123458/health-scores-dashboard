@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Cards from "./Cards";
 import Charts from "./Charts";
 import DataTable from "./DataTable";
+import EventForm from "./EventForm";
 
 const Dashboard = () => {
   const [customers, setCustomers] = useState([]);
@@ -41,6 +42,7 @@ const Dashboard = () => {
       </div>
       <Charts customers={customers} />
       <DataTable customers={customers} onRowClick={handleRowClick} />
+      <EventForm customers={customers} />
       {selectedCustomer && customerHealth && (
         <div className="mt-4 p-4 bg-gray-100 rounded">
           <h2 className="font-bold mb-2">

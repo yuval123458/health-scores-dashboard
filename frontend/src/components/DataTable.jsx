@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -10,39 +10,43 @@ import {
 import { FaSpinner } from "react-icons/fa";
 import "./DataTable.css";
 
-const DataTable = ({ customers, onRowClick }) => {
-  const [globalFilter, setGlobalFilter] = React.useState("");
+const tierColor = (tier) => {
+  if (tier === "Green") return "text-green-600 font-semibold";
+  if (tier === "Yellow") return "text-yellow-600 font-semibold";
+  if (tier === "Red") return "text-red-600 font-semibold";
+  return "";
+};
 
-  // Columns for customer health dashboard
+const DataTable = ({ customers, onRowClick }) => {
+  const [globalFilter, setGlobalFilter] = useState("");
+
+  // Use metrics.last_activity_at for Last Activity
   const columns = useMemo(
     () => [
-      {
-        accessorKey: "name",
-        header: "Customer Name",
-      },
-      {
-        accessorKey: "email",
-        header: "Email",
-      },
-      {
-        accessorKey: "health_score",
-        header: "Health Score",
-      },
+      { accessorKey: "name", header: "Customer Name" },
+      { accessorKey: "segment", header: "Segment" },
+      { accessorKey: "plan", header: "Plan" },
+      { accessorKey: "health_score", header: "Health Score" },
       {
         accessorKey: "health_tier",
         header: "Health Tier",
+        cell: (info) => (
+          <span className={tierColor(info.getValue())}>
+            {info.getValue() ?? "N/A"}
+          </span>
+        ),
       },
       {
-        accessorKey: "last_activity",
+        id: "last_activity",
         header: "Last Activity",
-        cell: (info) =>
-          info.getValue()
-            ? new Date(info.getValue()).toLocaleDateString("en-GB", {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric",
-              })
-            : "N/A",
+        cell: (info) => {
+          const row = info.row.original;
+          const value =
+            row.metrics && row.metrics.last_activity_at
+              ? row.metrics.last_activity_at
+              : "-";
+          return value;
+        },
       },
     ],
     []

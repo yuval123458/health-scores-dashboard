@@ -25,7 +25,7 @@ const Cards = ({ summary }) => {
         value={summary.red}
         icon={<span className="text-red-500">🔴</span>}
       />
-      <StatCard
+       {/* <StatCard
         title="At Risk"
         value={summary.at_risk_count}
         icon={<FaExclamationTriangle className="text-red-500" />}
@@ -33,9 +33,9 @@ const Cards = ({ summary }) => {
       <StatCard
         title="Newly At Risk (7d)"
         value={summary.newly_at_risk_7d}
-        icon={<FaExclamationTriangle className="text-yellow-500" />}
-      />
-      <StatCard
+        icon={<FaExclamationTriangle className="text-yellow-500" />} 
+      /> */}
+      <StatCard 
         title="Improving (30d)"
         value={summary.improving_30d}
         icon={<FaArrowUp className="text-green-500" />}
