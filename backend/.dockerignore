@@ -1,0 +1,11 @@
+Dockerfile.dev
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+.env
+.env.*
+.idea/
+.DS_Store
+tests/

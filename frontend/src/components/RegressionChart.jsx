@@ -55,7 +55,7 @@ export default function RegressionChartTier() {
     let alive = true;
     (async () => {
       try {
-        const r = await fetch("http://localhost:8000/api/customers");
+        const r = await fetch(`${import.meta.env.VITE_API_URL}/api/customers`);
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const js = await r.json();
         if (!alive) return;
@@ -65,7 +65,7 @@ export default function RegressionChartTier() {
           const daysLate = Number(m.last_invoice_days_late ?? (m.last_invoice === "invoice_late" ? 1 : 0));
           return {
             id: c.id,
-            tier: c.health_tier,                          // "Green" | "Yellow" | "Red"
+            tier: c.health_tier,                         
             health_score: Number(c.health_score ?? 0),
             logins_30d: Number(m.logins_30d ?? 0),
             key_features_60d: features,

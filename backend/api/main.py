@@ -8,9 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv(override=False) 
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+FRONTEND_URL = os.getenv("FRONTEND_URL")
 engine = create_engine(DATABASE_URL, pool_pre_ping=True, future=True)
 
 app = FastAPI(title="Customer Health Score API", version="0.2.0 (events-based)")
@@ -19,8 +20,10 @@ app = FastAPI(title="Customer Health Score API", version="0.2.0 (events-based)")
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://production-frontend.com",
 ]
+if FRONTEND_URL:
+    origins.append(FRONTEND_URL)
+    
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
