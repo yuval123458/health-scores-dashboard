@@ -2,8 +2,7 @@ import React, { useMemo } from "react";
 import RegressionChart from "./RegressionChart";
 import BlockChart from "./BlockChart";
 
-const Charts = ({ customers }) => {
-
+const Charts = ({ customers, summary }) => {
 
   const lineData = useMemo(() => {
     return customers.map((c) => ({
@@ -31,7 +30,7 @@ const Charts = ({ customers }) => {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-      <RegressionChart lineData={lineData} />
+      <RegressionChart customers={customers} summary={summary} />
       <BlockChart segmentData={segmentData} />
     </div>
   );

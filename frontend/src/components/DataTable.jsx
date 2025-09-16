@@ -20,7 +20,6 @@ const tierColor = (tier) => {
 const DataTable = ({ customers, onRowClick }) => {
   const [globalFilter, setGlobalFilter] = useState("");
 
-  // Use metrics.last_activity_at for Last Activity
   const columns = useMemo(
     () => [
       { accessorKey: "name", header: "Customer Name" },
@@ -42,8 +41,8 @@ const DataTable = ({ customers, onRowClick }) => {
         cell: (info) => {
           const row = info.row.original;
           const value =
-            row.metrics && row.metrics.last_activity_at
-              ? row.metrics.last_activity_at
+            row && row.last_activity_at
+              ? row.last_activity_at
               : "-";
           return value;
         },

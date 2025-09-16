@@ -9,7 +9,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [customerHealth, setCustomerHealth] = useState(null);
-  const [summary, setSummary] = useState(null); // <-- new
+  const [summary, setSummary] = useState(null);
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_API_URL}/api/customers`)
@@ -18,7 +18,6 @@ const Dashboard = () => {
       .catch((err) => console.error("failed to fetch customers table:", err))
       .finally(() => setLoading(false));
 
-    // Fetch KPI summary
     fetch(`${import.meta.env.VITE_API_URL}/api/dashboard/summary`)
       .then((res) => res.json())
       .then((data) => setSummary(data))
@@ -33,14 +32,20 @@ const Dashboard = () => {
       .catch((err) => console.error("failed to fetch customer health:", err));
   };
 
+ 
+
   if (loading || !summary) return <div>Loading...</div>;
 
   return (
     <div className="flex flex-col gap-8">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Cards summary={summary} />
+        <Cards
+          summary={summary.summary}
+          benchmarks={summary.benchmarks}
+          legacy_peek={summary.legacy_peek}
+        />
       </div>
-      <Charts customers={customers} />
+      <Charts customers={customers} summary={summary} />
       <DataTable customers={customers} onRowClick={handleRowClick} />
       <EventForm customers={customers} />
       {selectedCustomer && customerHealth && (
