@@ -5,12 +5,13 @@ from typing import Optional, Tuple, Dict, Any, List
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, text
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
+from pathlib import Path
 
-# ---------------------------------------------------------------------
 # Setup
-# ---------------------------------------------------------------------
-load_dotenv(override=True)
+load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 FRONTEND_URL = os.getenv("FRONTEND_URL")
@@ -30,9 +31,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------------------------------------------------------------------
 # Constants + Helpers
-# ---------------------------------------------------------------------
 MAX_HISTORY_DAYS = 90
 SEVERITY_W = {"low": 0.25, "medium": 0.50, "high": 0.75, "critical": 1.00}
 W = {"E": 0.35, "A": 0.30, "S": 0.20, "F": 0.15}  # combine weights
@@ -76,7 +75,6 @@ def compute_window_and_confidence(created_at: Optional[datetime], today: Optiona
 
 def compute_time_normalized_rates(row: Dict[str, Any], effective_days: int) -> Dict[str, Any]:
     denom = max(1, int(effective_days))
-    # smoothed late ratio prior
     ALPHA, BETA = 1.0, 3.0
     E_rate_30 = (float(row.get("active_days_total", 0)) / denom) * 30.0
     A_rate_60 = (float(row.get("features_total", 0))     / denom) * 60.0
@@ -138,9 +136,6 @@ def combine_score(pE: float, pA: float, pS: float, pF: float) -> int:
     shifted = 0.30 + 0.70*raw
     return int(round(100 * clamp01(shifted)))
 
-# ---------------------------------------------------------------------
-# SQL (keep SQL dumb; aggregate in Python)
-# ---------------------------------------------------------------------
 CUSTOMERS_SQL = text("""
   SELECT id, name, segment, plan, created_at, updated_at
   FROM customer
@@ -180,9 +175,7 @@ INVOICES_SQL = text("""
   WHERE e.occurred_at >= :cutoff
 """)
 
-# ---------------------------------------------------------------------
-# Data shaping helpers (DRY)
-# ---------------------------------------------------------------------
+# Data shaping helpers
 def load_population(cutoff_days: int) -> Dict[int, Dict[str, Any]]:
     cutoff_dt = datetime.utcnow() - timedelta(days=cutoff_days)
     with engine.connect() as conn:
@@ -318,7 +311,6 @@ def recent_prior_changes_for_customer(base: Dict[int, Dict[str, Any]], id: int, 
     s_recent = (s_recent_cnt / eff_len(r30, today)) * 30.0
     s_prior  = (s_prior_cnt  / eff_len(p30s, p30e)) * 30.0
 
-    # finance late ratio recent/prior (90d windows)
     inv_r = [(dl, day) for (dl, day) in rec["invoice_days"] if day and day >= r90]
     inv_p = [(dl, day) for (dl, day) in rec["invoice_days"] if day and p90s <= day < p90e]
     def late_ratio(lst):
@@ -336,7 +328,7 @@ def recent_prior_changes_for_customer(base: Dict[int, Dict[str, Any]], id: int, 
         "late_ratio_90d":     {"recent": round(f_recent, 3),  "prior": round(f_prior, 3),  "delta": round(f_recent - f_prior, 3)},
     }
 
-# ---------------------------------------------------------------------
+
 # Endpoints
 # ---------------------------------------------------------------------
 
@@ -527,8 +519,6 @@ def customer_health_detail(id: int):
             "invoices_total": invoices_total,
             "late_invoices_total": late_invoices_total,
         },
-        # keep your short recent/prior block if you still use it elsewhere
-        # "recent_vs_prior": recent_prior_changes_for_customer(base, id, today),
         "series": series,
     }
 
@@ -593,3 +583,20 @@ def record_event(id: int, payload: Dict[str, Any]):
         "type": evt_type,
         "occurred_at": occurred_at_sql,
     }
+
+FRONTEND_DIST = os.getenv("FRONTEND_DIST", "../frontend/dist")
+_frontend_dir = Path(FRONTEND_DIST).resolve()
+
+if _frontend_dir.exists():
+    app.mount(
+        "/", 
+        StaticFiles(directory=str(_frontend_dir), html=True),  
+        name="frontend",
+    )
+
+@app.get("/api/dashboard", response_class=HTMLResponse)
+def serve_dashboard():
+    index_path = _frontend_dir / "index.html"
+    if index_path.exists():
+        return FileResponse(str(index_path))
+    return RedirectResponse(url="/", status_code=307)

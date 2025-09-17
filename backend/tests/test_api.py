@@ -31,7 +31,6 @@ def test_customers_min_contract(monkeypatch):
     data = r.json()
     assert isinstance(data, list)
 
-    # If there are items, validate a small contract
     if data:
         item = data[0]
         assert {"id","name","segment","plan","health_score","health_tier"} <= set(item.keys())

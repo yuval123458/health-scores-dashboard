@@ -11,7 +11,6 @@ const METRICS = [
   { key: "late_invoices",    label: "Late Invoices per Month" },
 ];
 
-// tiny OLS on index-based x
 function fitLine(values) {
   const n = values.length;
   if (n < 2) return { slope: 0, intercept: values[0] ?? 0 };
@@ -35,7 +34,7 @@ const getLastNMonths = (series, n = 3) => {
 export default function RegressionChart({ customers }) {
   const [customerId, setCustomerId] = useState("");
   const [metric, setMetric] = useState(METRICS[0].key);
-  const [seriesByMetric, setSeriesByMetric] = useState(null); // { logins:[{month,value}], ... }
+  const [seriesByMetric, setSeriesByMetric] = useState(null); 
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
